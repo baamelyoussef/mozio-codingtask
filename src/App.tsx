@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import {cities} from './assets/data'
+import {cities} from './data/db'
 import Router from './router/Router'
 
 interface city{
