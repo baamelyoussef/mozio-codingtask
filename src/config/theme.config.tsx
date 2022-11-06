@@ -43,6 +43,7 @@ const theme = createTheme({
         },
         MuiAutocomplete:{
             defaultProps:{
+                size:"small",
                 style:{
                     margin:"0px",   
                     background:"#ffffffab",
