@@ -25,8 +25,7 @@ export const getDistance =(cities:Array<City>):number=>{
 export const getCitiesByKeyword =(keyword:string):Array<City>=>{
     // When a user attempts to find cities using the phrase “fail” (case-insensitive) fail to return results
     let citiesToReturn:Array<City>=[]
-
-           if(keyword.length>0 && keyword.toLowerCase() != "fail") {
+    if(keyword&& keyword.length>0 && keyword.toLowerCase() != "fail") {
             citiesToReturn=cities.filter((city)=>city.Name.toLowerCase().startsWith(keyword.toLowerCase()))
             }else{
 

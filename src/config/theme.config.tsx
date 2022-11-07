@@ -43,7 +43,7 @@ const theme = createTheme({
         },
         MuiAutocomplete:{
             defaultProps:{
-                size:"small",
+                size:"medium",
                 style:{
                     margin:"0px",   
                     background:"#ffffffab",
@@ -55,14 +55,15 @@ const theme = createTheme({
         MuiInput:{
             defaultProps:{
                 style:{
-                        // background:"#ffffffab",
-                        // borderRadius:"10px 10px 0px 0px ",
+                    // background:"#ffffffab",
+                    // borderRadius:"10px 10px 0px 0px ",
                     outline:"none"
                 }
             }
         },
         MuiTextField:{
             defaultProps:{
+                size:"medium",
                 style:{
                     background:"#ffffffab",
                     borderRadius:"5px 5px 5px 5px",
@@ -72,9 +73,10 @@ const theme = createTheme({
         MuiDatePicker:{
             styleOverrides: {
                 root: {
-                 width:300
+                 width:300,
+                 
                 },
-              },
+            }
         }
     }
 })
