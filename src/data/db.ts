@@ -17,9 +17,21 @@ function getDistanceFromLatLng(lat1:number, lng1:number, lat2:number, lng2:numbe
     return d; 
 }
 /* Endpoint that receives a list of cities and calculates the distances*/
-export const getDistance =(cities:Array<City>):number=>{
+export const getDistance =(cities:Array<City>):number[]=>{
     // When “Dijon” city is involved the distance calculation should fail
-    return 1
+    let subsequentDistances:number[]=[]
+    let failedSearch:boolean=false
+    let prevCity:City
+    cities.map((city)=>{
+        if(city.Name!="Dijon"){
+            failedSearch=true
+            if(prevCity && !failedSearch){
+                subsequentDistances.push(parseInt(getDistanceFromLatLng(prevCity.Latitude,prevCity.Longitude,city.Latitude,city.Longitude).toString()))
+            }
+            prevCity=city
+        }
+    })
+    return subsequentDistances
 } 
 /* Endpoint that receives a keyword and returns a list of cities that match the keyword */ 
 export const getCitiesByKeyword =(keyword:string):Array<City>=>{
@@ -27,9 +39,7 @@ export const getCitiesByKeyword =(keyword:string):Array<City>=>{
     let citiesToReturn:Array<City>=[]
     if(keyword&& keyword.length>0 && keyword.toLowerCase() != "fail") {
             citiesToReturn=cities.filter((city)=>city.Name.toLowerCase().startsWith(keyword.toLowerCase()))
-            }else{
-
-        }
+            }
            
     return citiesToReturn
     
