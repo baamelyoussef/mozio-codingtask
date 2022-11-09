@@ -24,13 +24,14 @@ export const getDistance =(cities:Array<City>):number[]=>{
     let prevCity:City
     cities.map((city)=>{
         if(city.Name!="Dijon"){
-            failedSearch=true
-            if(prevCity && !failedSearch){
+            
+            if(prevCity ){
                 subsequentDistances.push(parseInt(getDistanceFromLatLng(prevCity.Latitude,prevCity.Longitude,city.Latitude,city.Longitude).toString()))
             }
             prevCity=city
         }
     })
+
     return subsequentDistances
 } 
 /* Endpoint that receives a keyword and returns a list of cities that match the keyword */ 

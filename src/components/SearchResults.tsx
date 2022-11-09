@@ -1,6 +1,6 @@
 import React,{useState,useEffect} from 'react'
 import dayjs from 'dayjs';
-import { Skeleton,Paper,Box,Stack,Divider,Backdrop,CircularProgress,List,ListItem,ListItemText } from '@mui/material'
+import { Skeleton,Paper,Box,Stack,Divider,Backdrop,Alert,AlertTitle ,CircularProgress,List,ListItem,ListItemText } from '@mui/material'
 import styled from '@emotion/styled'
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -28,6 +28,12 @@ const Total= styled.h2`
       display:"flex";
       font-weight:"800px"
     `
+const FailedCalculation= styled.h3`
+      margin:15px;
+      color:black;
+      display:"flex";
+      font-weight:"800px"
+    `
     const Description= styled.p`
       margin:0;
       color:white;
@@ -44,7 +50,7 @@ function SearchResults() {
     let indexcount:number
     let prevCityName:string 
     arr.map((ar,index)=>{
-      if(prevCityName &&indexcount){
+      if(prevCityName){
         res.push({
           'origin':prevCityName,
           'destination':ar,
@@ -53,27 +59,29 @@ function SearchResults() {
         prevCityName=ar
         indexcount=index
       }else{
+        console.log("down here  ",ar)
         prevCityName=ar
         indexcount=index
       }
     })
+    
     return res;
   }
   useEffect(()=>{
-    if(subsequentData && subsequentDistances){
-      console.log(subsequentData)
-      setTimeout(() => {
+    setSubsequentData(sliceIntoChunks(namesOfCities))
+     
+  },[subsequentDistances])
+  useEffect(()=>{
+       setTimeout(() => {
         setIsLoading(false)
-      }, 10000);
-    }
+       }, 5000);{ }
+    
   },[subsequentData])
   useEffect(() => { 
     let paramCities =namesOfCities.map((nameOfCity)=>{
       return getCitiesByKeyword(nameOfCity)[0]
-    }) 
+    })
     setSubsequentDistances(getDistance(paramCities))
-      setSubsequentData(sliceIntoChunks(namesOfCities))
-    console.log("rr",getDistance(paramCities))
     setTotalDistance(
       getDistance(paramCities).reduce((a, b) => a + b, 0)
     )
@@ -82,20 +90,20 @@ function SearchResults() {
   
   return (
     <div>{
-      isLoading?
+      isLoading? 
     <Backdrop
   sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
   open={isLoading}
   
->
+> 
   <CircularProgress color="inherit" /></Backdrop>:
-    
+     
     <Paper elevation={3} sx={{padding:"25px",backgroundColor:"rgba(0, 0, 0, 0.2)",backdropFilter: "blur(5px)", borderRadius:"10px", margin:"15px",textAlign:"center",display:"flex",flexDirection:"column" }}>
       <Box  sx={{ background:'transparent', padding:'0px', marginBottom:"25px"}}>
-        <Title>Calculated Distance</Title>
-        <Description>Calculated distance between multiple locations you have selected is</Description>
-        {subsequentDistances.length>0&&<Stack spacing={2}>
-        <List  sx={{ width: '100%',  bgcolor: 'rgba(255,255, 255, 0.8)',borderRadius:'10px',margin:"15px 0" }}>
+        <Title>Calculation Results</Title>
+          
+        {subsequentDistances.length>0 &&<Stack spacing={2}>
+        <List  sx={{ width: '100%',  bgcolor: 'rgba(255,255, 255, 0.7)',borderRadius:'10px',margin:"15px 0" }}>
           {
           subsequentData.map((data)=>{
             return(
@@ -115,8 +123,11 @@ function SearchResults() {
         }
             </List>
         </Stack>}
-      {subsequentDistances.length<1?
-      <Total>{totalDistance==0? "Calculation failed":totalDistance+" Km"} </Total>
+      {subsequentDistances.length==0||subsequentDistances.length<1?
+      <Alert severity="error" sx={{bgcolor: 'rgba(255,255, 255, 0.7)'}}>
+      <AlertTitle>{totalDistance==0&& "Calculation failed"}</AlertTitle>
+      <FailedCalculation >It seems like there is a technical problem, please try again later.</FailedCalculation>
+      </Alert>
       :<Total>Total Distance : {totalDistance==0? "Calculation failed":totalDistance+" Km"} </Total>
 }
 </Box>

@@ -2,6 +2,7 @@ import { Container, Box, Paper, Typography } from '@mui/material'
 import Button from '@mui/material/Button';
 import mozioLogo from '../assets/img/logo.svg'
 import SearchResults from '../components/SearchResults';
+import SearchForm from '../components/SearchForm';
 
 const bgImgUrl: string = "https://images.unsplash.com/photo-1532330384785-f94c84352e91?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1411&q=80"
 const styles = {
@@ -29,8 +30,10 @@ function index() {
       <Box
         display="flex"
         justifyContent="center"
+        flexDirection={"column"}
         alignItems="center"
       >
+        <SearchForm readOnly={true}/>
         <SearchResults />
       </Box>
     </Paper>

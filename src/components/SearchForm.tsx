@@ -6,14 +6,16 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import LoadingButton from '@mui/lab/LoadingButton';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import ClearIcon from '@mui/icons-material/Clear';
-import { Autocomplete, Button, Box, Paper, TextField, Stack, CircularProgress, InputAdornment } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit';
+import { Autocomplete, Button, Box, Tooltip, Paper, TextField, Snackbar, Alert, Stack, CircularProgress, InputAdornment } from '@mui/material'
 import AddLocationAltIcon from '@mui/icons-material/AddLocationAlt';
 import SendIcon from '@mui/icons-material/Send';
 import PersonIcon from '@mui/icons-material/Person';
 import WrongLocationIcon from '@mui/icons-material/WrongLocation';
 import { LocalizationProvider, DesktopDatePicker } from '@mui/x-date-pickers';
-import { getDistance, getCitiesByKeyword} from '../data/db'
+import { getDistance, getCitiesByKeyword } from '../data/db'
 import { valueToPercent } from '@mui/base';
+import { KeyObject } from 'crypto';
 interface City {
   Name: string,
   Latitude: number,
@@ -28,21 +30,29 @@ const Description = styled.p`
 margin:0;
 color:white;
 `
-function SearchForm(props:any) {
+function SearchForm(props: any) {
   const [buttonSubmitted, setButtonSubmitted] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isIntermediatesPreFilled, setIsIntermediatesPreFilled] = useState(false)
+  const [isDatePrefilled, setIsDatePrefilled] = useState(false)
+  const [isPassengerPrefilled, setIsPassengerPrefilled] = useState(false)
+  const [isReadOnly, setIsReadOnly] = useState(props.readOnly)
+  const [isOriginEmpty, setisOriginEmpty] = useState<boolean>(false)
+  const [isDestinationEmpty, setisDestinationEmpty] = useState<boolean>(false)
+  const [isIntermediateEmpty, setisIntermediateEmpty] = useState<boolean[]>([])
+  const [isSnackbarOpen, setIsSnackbarOpen] = useState(false)
   const [intermediateCityCombos, setIntermediateCityCombos] = useState<Array<City[]>>(
     // searchParams.getAll("intermediatecities").length>0?new Array(searchParams.getAll("intermediatecities").length).fill([]):
     [])
-
-  const [datevalue, setDateValue] = useState(dayjs(new Date()));
+  const [datevalue, setDateValue] = useState(isReadOnly ? dayjs(new Date(searchParams.getAll("date")[0])) : dayjs(new Date()));
   const navigate = useNavigate();
   const [passengerNumber, setPassengerNumber] = useState(0)
   /*OriginStates */
   const [originValue, setOriginValue] = useState(
     // searchParams.get('origincity')?searchParams.getAll('origincity')[0]:
 
-  '')
+    '')
+  const [isOriginPreFilled, setIsOriginPreFilled] = useState(false)
   const [showOriginCities, setShowOriginCities] = useState(false)
   const [originInputValue, setOriginInputValue] = useState(
     // searchParams.get('origincity')?searchParams.getAll('origincity')[0]:
@@ -57,6 +67,7 @@ function SearchForm(props:any) {
   const [destinationValue, setdestinationValue] = useState(
     // searchParams.get('destinationcity')?searchParams.getAll('destinationcity')[0]:
     '')
+  const [isDestinationPreFilled, setIsDestinationPreFilled] = useState(false)
   const [showdestinationCities, setShowdestinationCities] = useState(false)
   const [selecteddestination, setSelecteddestination] = useState<City>()
   const [destinationPopperText, setdestinationPopperText] = useState('')
@@ -65,7 +76,7 @@ function SearchForm(props:any) {
   const [destinationLoading, setdestinationLoading] = useState(false)
   /*IntermidateStates */
   const [intermediateIndex, setIntermediateIndex] = useState<number>(0)
-  const [intermediateValues, setintermediateValues] = useState<Array<string>>(searchParams.getAll('intermediatecities').length>0?searchParams.getAll('intermediatecities'):[])
+  const [intermediateValues, setintermediateValues] = useState<Array<string>>(searchParams.getAll('intermediatecities').length > 0 ? searchParams.getAll('intermediatecities') : [])
   const [showintermediateCitiesCombos, setShowintermediateCitiesCombos] = useState<Array<boolean>>([])
   const [showintermediateCities, setShowintermediateCities] = useState<Array<boolean>>([])
   const [selectedIntermediates, setSelectedIntermediates] = useState<Array<City>>([])
@@ -74,56 +85,121 @@ function SearchForm(props:any) {
   const [IntermediateOptions, setIntermediateOptions] = useState<Array<City[]>>([]);
   const [intermediateLoadings, setintermediateLoadings] = useState<Array<boolean>>([])
   useEffect(() => {
-    if(intermediateValues.length<1 ){
-      // if(searchParams.getAll('intermediatecities').length<1){
-        
+    if (intermediateValues.length < 1) {
+      if (searchParams.getAll('intermediatecities').length < 1) {
+
         let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
           return ''
         })
         setintermediateValues(newIntermediateValues)
-      // }else{
-        // console.log("test")
-      //  setOriginValue()
-      //  setdestinationValue(searchParam.get('destinationcity'))
-      let selectedParamOptions:Array<City>= searchParams.getAll('intermediatecities').map((intermediateCity)=>{
-       return getCitiesByKeyword(intermediateCity)[0]
-      })
-      setSelectedIntermediates(selectedParamOptions)
-       
-      // }
+      }
     }
-    
-    const newInputVal=searchParams.get("origincity")
-      // setOriginInputValue(searchParams.get("origincity").toString())
-    
-    
-    }, [])
-    // console.log(selectedIntermediates)
-    const submitForm = () => {
-    
-    setButtonSubmitted(true)
-    let selectedIntermediateCities=selectedIntermediates.map((selectedIntermediate)=>{
-      return selectedIntermediate.Name
+    // console.log("test")
+    if (searchParams.getAll('origincity').length > 0) {
+      setIsOriginPreFilled(true)
+      setOriginValue(searchParams.getAll('origincity')[0])
+      let selectedOriginParam: City = getCitiesByKeyword(searchParams.getAll('origincity')[0])[0]
+      setSelectedOrigin(selectedOriginParam)
+    }
+    if (searchParams.getAll('intermediatecities').length > 0) {
+      setIsIntermediatesPreFilled(true)
+      setIntermediateCityCombos(new Array(searchParams.getAll('intermediatecities').length).fill([])) 
+      // setOriginValue(searchParams.getAll('origincity')[0])
+      // let selectedOriginParam: City = getCitiesByKeyword(searchParams.getAll('origincity')[0])[0]
+      // setSelectedOrigin(selectedOriginParam)
+    }
+
+    if (searchParams.getAll('destinationcity').length > 0) {
+      setIsDestinationPreFilled(true)
+      setdestinationValue(searchParams.getAll('destinationcity')[0])
+      let selectedDestinationParam: City = getCitiesByKeyword(searchParams.getAll('destinationcity')[0])[0]
+      setSelecteddestination(selectedDestinationParam)
+    } 
+    if (searchParams.getAll('passengers')[0]) {
+      setIsPassengerPrefilled(true)
+    }
+    if (searchParams.getAll('date')[0]) {
+      setIsDatePrefilled(true)
+    }
+    // let selectedParamOptions:Array<City>= searchParams.getAll('intermediatecities').map((intermediateCity)=>{
+    //  return getCitiesByKeyword(intermediateCity)[0]
+    // })
+    // setSelectedIntermediates(selectedParamOptions)
+
+    const newInputVal = searchParams.get("origincity")
+    // setOriginInputValue(searchParams.get("origincity").toString())
+
+
+  }, [])
+  // console.log(selectedIntermediates)
+  const isFormValid = () => {
+    let areIntermediateValid: boolean = true
+    let isInterEmpty: boolean[] = intermediateCityCombos.map((e, index: number) => {
+      return false
     })
-    if(selectedIntermediates&&selectedOrigin&&selecteddestination&&datevalue&&passengerNumber){
-      setSearchParams({
-        origincity:selectedOrigin.Name,
-        destinationcity:selecteddestination.Name,
-        date:dayjs(datevalue).format('DD/MM/YYYY').toString(),
-        intermediatecities:selectedIntermediateCities,
-        passengers:passengerNumber.toString()
-      })
-      
+    if (!originValue || !selectedOrigin) {
+      setisOriginEmpty(true)
     }
-    setTimeout(() => {
-      navigate(`/results${window.location.search}`);
-    }, 2000);
+    if (intermediateCityCombos.length > 0) {
+      intermediateValues.map((intermediateValue: string, index: number) => {
+
+        if (intermediateValue.length < 2 || !selectedIntermediates[index]) {
+          isInterEmpty = isInterEmpty.map((isIntermediateEmpty: boolean, key: number) => {
+            if (index == key) {
+              return true
+            } else {
+              return isIntermediateEmpty
+            }
+          })
+        }
+      })
+      setisIntermediateEmpty(isInterEmpty)
+      areIntermediateValid = isIntermediateEmpty.every((isIE) => isIE == true)
+
+    }
+    console.log(isIntermediateEmpty)
+    if (!destinationValue || !selecteddestination) {
+      setisDestinationEmpty(true)
+    }
+    if (!isDestinationEmpty && !isOriginEmpty && areIntermediateValid) {
+      return true
+    } else {
+      return false
+    }
+  }
+  const submitForm = () => {
+    if (isFormValid()) {
+      setButtonSubmitted(true)
+      let selectedIntermediateCities = selectedIntermediates.map((selectedIntermediate) => {
+        return selectedIntermediate.Name
+      })
+      if (selectedIntermediates && selectedOrigin && selecteddestination && datevalue && passengerNumber) {
+        setSearchParams({
+          origincity: selectedOrigin.Name,
+          destinationcity: selecteddestination.Name,
+          date: dayjs(datevalue).format('YYYY-MM-DDTHH:mm:ss').toString(),
+          intermediatecities: selectedIntermediateCities,
+          passengers: passengerNumber.toString()
+        })
+
+      }
+      setTimeout(() => {
+        navigate(`/results${window.location.search}`);
+      }, 2000);
+    } else {
+      setIsSnackbarOpen(true)
+      setTimeout(() => {
+        setIsSnackbarOpen(false)
+
+      }, 3000);
+    }
   }
   useEffect(() => {
-    if(intermediateValues.length>1){
+    if (intermediateValues.length > 1) {
+
       let newintermediatePopperTexts: string[] = intermediateCityCombos.map((intermediatePopperText, index: number) => {
         if (intermediateIndex == index) {
-          
+
           if (intermediateValues[index].length > 0) {
             if (intermediateValues[index].toLowerCase() == "fail") { return (`Search failed`) }
             else { return (`No cities found for "${intermediateValues[index]}"`) }
@@ -135,7 +211,7 @@ function SearchForm(props:any) {
           return `Please enter a city name`
         }
       })
-      setintermediatePopperTexts(newintermediatePopperTexts)   
+      setintermediatePopperTexts(newintermediatePopperTexts)
     }
 
 
@@ -156,7 +232,7 @@ function SearchForm(props:any) {
       }
     })
     setintermediateLoadings(newIntermediateLoadings)
-    
+
     let newIntermediateOpenStates = intermediateCityCombos.map((e, index: number) => {
       if (intermediateIndex == index) {
         return true
@@ -165,9 +241,9 @@ function SearchForm(props:any) {
       }
     })
     setintermediateOpenStates(newIntermediateOpenStates)
-      setTimeout(() => {
-        if(searchParams.getAll('intermediatecities').length<1){
-          let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
+    setTimeout(() => {
+      if (searchParams.getAll('intermediatecities').length < 1) {
+        let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
           if (intermediateIndex == index) {
             return inputV
           } else {
@@ -176,24 +252,24 @@ function SearchForm(props:any) {
         })
         setintermediateValues(newIntermediateValues)
       }
-        let newIntermediateOptions: Array<City[]> = intermediateCityCombos.map((IntermediateOption, index: number) => {
-          if (index == intermediateIndex) {
-            return getCitiesByKeyword(inputV)
-          } else {
-            return []
-          }
-        })
-        setIntermediateOptions(newIntermediateOptions)
-        let newIntermediateLoadingsAfterSet = intermediateCityCombos.map((e, index: number) => {
-          if (intermediateIndex == index) {
-            return false
-          } else {
-            return false
-          }
-        })
-        setintermediateLoadings(newIntermediateLoadingsAfterSet)
-      }, 2000);
-    
+      let newIntermediateOptions: Array<City[]> = intermediateCityCombos.map((IntermediateOption, index: number) => {
+        if (index == intermediateIndex) {
+          return getCitiesByKeyword(inputV)
+        } else {
+          return []
+        }
+      })
+      setIntermediateOptions(newIntermediateOptions)
+      let newIntermediateLoadingsAfterSet = intermediateCityCombos.map((e, index: number) => {
+        if (intermediateIndex == index) {
+          return false
+        } else {
+          return false
+        }
+      })
+      setintermediateLoadings(newIntermediateLoadingsAfterSet)
+    }, 2000);
+
 
 
 
@@ -220,13 +296,16 @@ function SearchForm(props:any) {
     /*Form validation */
     if (passengerNumber == 0) {
       setIsFormInvalid(true)
-    }
-    if (passengerNumber > 0 && datevalue) {
+    } else {
       setIsFormInvalid(false)
     }
+    // if (passengerNumber > 0 && datevalue) {
+    //   setIsFormInvalid(false)
+    // }
   })
 
   useEffect(() => {
+    setisOriginEmpty(false)
     setShowOriginCities(true)
     setoriginOptions([])
     setOriginLoading(true)
@@ -244,11 +323,7 @@ function SearchForm(props:any) {
     }
   }, [originValue])
 
-  useEffect(() => {
-    // let temp: Array<City[]> = new Array(intermediateIndex).fill(["1"])
-    // setIntermediateOptions(temp)
-    // console.log("rr", IntermediateOptions)
-  }, [])
+
   useEffect(() => {
 
     let newIntermediateOptions = intermediateCityCombos.map((IntermediateOption, index: number) => {
@@ -320,6 +395,7 @@ function SearchForm(props:any) {
     }
   }, [originopen]);
   useEffect(() => {
+    setisDestinationEmpty(false)
     setShowdestinationCities(true)
     setdestinationOptions([])
     setdestinationLoading(true)
@@ -347,7 +423,7 @@ function SearchForm(props:any) {
     console.log(newValue.$d)
   };
 
- 
+
   const addIntermediateCity = () => {
     let newIntermediateCity: City[] = new Array(1).fill([])
     setIntermediateCityCombos([...intermediateCityCombos, newIntermediateCity])
@@ -355,239 +431,282 @@ function SearchForm(props:any) {
   const removeIntermediateCity = (key: any) => {
     setIntermediateCityCombos(intermediateCityCombos.filter((city: any, id: any) => id !== key))
     let newSelectedIntermediates = selectedIntermediates
-    newSelectedIntermediates.splice(key,1)
+    newSelectedIntermediates.splice(key, 1)
     setSelectedIntermediates(newSelectedIntermediates)
   }
 
 
 
   return (
-    <Paper elevation={3} sx={{ padding: "25px", backgroundColor: "rgba(0, 0, 0, 0.2)", backdropFilter: "blur(5px)", borderRadius: "10px", margin: "15px", textAlign: "center", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ background: 'transparent', padding: '0px', marginBottom: "25px" }}>
-        <Title >Distance Calculator</Title>
-        <Description>Calculate the distance of your trip between multiple locations with ease</Description>
-      </Box>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <Box>
-          <Autocomplete
-            fullWidth
-            onInputChange={(e, inputValue: string) => {
-              setOriginLoading(true)
-              setOriginValue(inputValue)
-              setoriginOpen(true)
-            }}
-            onClose={() => {
-              setoriginOpen(false);
-            }}
-            onChange={(event, selectedValue: City) => {
-              setSelectedOrigin(selectedValue)
-            }}
-            clearIcon={<ClearIcon />}
-            getOptionLabel={(option: any) => {
-              if (originValue.length > 0) {
-                return option.Name
-              } else {
-                return `No cities found for "${originValue}"`
-              }
-            }}
-            options={originoptions}
-            forcePopupIcon={showOriginCities}
-            loading={originLoading}
-            
-            inputValue={originValue}
-            noOptionsText={originPopperText}
-            renderOption={(props, option: any) => <li {...props}><LocationOnIcon /> {option.Name}</li>}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                required
-                variant="filled"
-                value={originInputValue}
-                label="City of origin"
-                autoComplete='off'
-                InputProps={{
-                  ...params.InputProps,
-                  autoComplete:'off',
-                  endAdornment: (
-                    <React.Fragment>
-                      {originLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                      {params.InputProps.endAdornment}
-                    </React.Fragment>
-                  ),
+    <div>
+      <Paper elevation={3} sx={{ padding: "25px", backgroundColor: "rgba(0, 0, 0, 0.2)", backdropFilter: "blur(5px)", borderRadius: "10px", margin: "15px", textAlign: "center", display: "flex", flexDirection: "column" }}>
+        <Box sx={{ background: 'transparent', padding: '0px', marginBottom: "25px" }}>
+          <Title >Distance Calculator</Title>
+          <Description>Calculate the distance of your trip between multiple locations with ease</Description>
+        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Box>
+            <Box sx={{ display: "flex" }}>
+              <Autocomplete
+                fullWidth
+                disabled={isReadOnly || isOriginPreFilled}
+                onInputChange={(e, inputValue: string) => {
+                  if (!isOriginPreFilled) {
+
+                    setOriginLoading(true)
+                    setOriginValue(inputValue)
+                    setoriginOpen(true)
+                  }
                 }}
-              />
-            )}
-          />
-          {
-            intermediateCityCombos.map((intermediateCombo: any, key: number) => {
-              return (
-                <Box sx={{
-                  margin: "10px 0"
-                }}>
-                  <Autocomplete
-                    fullWidth
-                    onOpen={() => {
-                      let newIntermediateOptions = intermediateCityCombos.map((IntermediateOption, index: number) => {
-                        return []
-                  
-                      })
-                      setIntermediateOptions(newIntermediateOptions)
-                      setIntermediateIndex(key)
+                onClose={() => {
+                  setoriginOpen(false);
+                }}
+                onChange={(event, selectedValue: City) => {
+                  setSelectedOrigin(selectedValue)
+                }}
+                clearIcon={<ClearIcon />}
+                getOptionLabel={(option: any) => {
+                  if (originValue.length > 0) {
+                    return option.Name
+                  } else {
+                    return `No cities found for "${originValue}"`
+                  }
+                }}
+                options={originoptions}
+                forcePopupIcon={showOriginCities}
+                loading={originLoading}
+                sx={{ width: { xs: "100%", sm: "200px" } }}
+                value={selectedOrigin}
+                inputValue={originValue}
+                noOptionsText={originPopperText}
+                renderOption={(props, option: any) => <li {...props}><LocationOnIcon /> {option.Name}</li>}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    required
+                    variant="filled"
+                    error={isOriginEmpty}
+                    value={originInputValue}
+                    label="City of origin"
+                    autoComplete='off'
+                    InputProps={{
+                      ...params.InputProps,
+                      autoComplete: 'off',
+                      endAdornment: (
+                        <React.Fragment>
+                          {originLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </React.Fragment>
+                      ),
                     }}
-                    onLoad={()=>{
-                      
-                    }}
-                    onInputChange={(e, inputValue: string) => {
-                      setIntermediateIndex(key)
-                      handleChangeIntermediate(inputValue)
-                    }}
-                    onClose={() => {
-                      let newOpenStates = intermediateCityCombos.map((e, index: number) => {
-                        return false
-                      })
-                      setintermediateOpenStates(newOpenStates)
-                      console.log("close", intermediateOpenStates)
-                    }}
-                    onChange={(event, selectedValue: City) => {
-                      setIntermediateIndex(key)
-                      handleSelectIntermediate(selectedValue)
-
-                    }}
-                    clearIcon={<ClearIcon />}
-                    getOptionLabel={(option: City) => {
-                      if (intermediateValues[key].length > 0) {
-                        return option.Name
-                      } else {
-                        return `No cities found for "${intermediateValues[key]}"`
-                      }
-
-                    }}
-                    inputValue={intermediateValues[key]}
-                    options={IntermediateOptions[key]}
-                    forcePopupIcon={showintermediateCities[key]}
-                    loading={intermediateLoadings[key]}
-                    noOptionsText={intermediatePopperTexts[key]}
-                    renderOption={(props, option: any) => <li {...props}><LocationOnIcon /> {option.Name}</li>}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        required
-                        variant="filled"
-                        
-                        label="Intermediate City"
-                        autoComplete='off'
-                        value={intermediateValues[key]}
-                        InputProps={{
-                          ...params.InputProps,
-                          autoComplete:'off',
-                          endAdornment: (
-                            <React.Fragment>
-                              {intermediateLoadings[key] ? <CircularProgress color="inherit" size={20} /> : null}
-                              {params.InputProps.endAdornment}
-                            </React.Fragment>
-                          ),
-                        }}
-                      />
-                    )}
                   />
-                  <Button variant="outlined" onClick={() => removeIntermediateCity(key)} endIcon={<WrongLocationIcon />}>
-                    Remove City
-                  </Button>
-                </Box>
-              )
-            })
-          }
-          <Button sx={{ marginBottom: "5px" }} variant="outlined" onClick={addIntermediateCity} endIcon={<AddLocationAltIcon />}>
-            Add Intermediate City
-          </Button>
-          <Autocomplete
-            fullWidth
-            onInputChange={(e, inputValue: string) => {
-              setdestinationLoading(true)
-              setdestinationValue(inputValue)
-              setdestinationOpen(true)
-            }}
-            onClose={() => {
-              setdestinationOpen(false);
-            }}
-            onChange={(event, selectedValue: City) => {
-              setSelecteddestination(selectedValue)
-              console.log(selectedValue)
-            }}
-            clearIcon={<ClearIcon />}
-            getOptionLabel={(option: any) => {
-              if (destinationValue.length > 0) {
-                return option.Name
-              } else {
-                return `No cities found for "${destinationValue}"`
-              }
-            }}
-            options={destinationoptions}
-            forcePopupIcon={showdestinationCities}
-            loading={destinationLoading}
-            inputValue={destinationValue}
-            noOptionsText={destinationPopperText}
-            renderOption={(props, option: any) => <li {...props}><LocationOnIcon /> {option.Name}</li>}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                required
-                autoComplete='off'
-                variant="filled"
-                label="City of Destination"
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <React.Fragment>
-                      {destinationLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                      {params.InputProps.endAdornment}
-                    </React.Fragment>
-                  ),
-                }}
+                )}
               />
-            )}
-          />
+              {isOriginPreFilled && !isReadOnly && <Tooltip title="Edit"><Button ><EditIcon onClick={() => {
+                setIsOriginPreFilled(false)
+              }} /></Button></Tooltip>}</Box>
+            {
+              intermediateCityCombos.map((intermediateCombo: any, key: number) => {
+                return (
+                  <Box sx={{
+                    margin: "10px 0"
+                  }}>
+                    <Autocomplete
+                      fullWidth
+                      disabled={isReadOnly||isIntermediatesPreFilled}
+                      sx={{ width: { xs: "100%", sm: "200px" } }}
+                      autoComplete={isReadOnly}
+                      onOpen={() => {
+                        let newIntermediateOptions = intermediateCityCombos.map((IntermediateOption, index: number) => {
+                          return []
 
-        </Box>
-        <Box>
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <Stack spacing={3}>
-              <DesktopDatePicker
-                minDate={new Date()}
-                disablePast
-                /* label="Date desktop" */
-                inputFormat="MM/DD/YYYY"
-                value={datevalue}
-                onChange={handleDatePickerChange}
-                renderInput={(params) => <TextField required fullWidth {...params} />}
-              /></Stack></LocalizationProvider>
-        </Box>
-        <Box>
-          {/* <PersonIcon /> */}
-          <TextField required fullWidth
+                        })
+                        setIntermediateOptions(newIntermediateOptions)
+                        setIntermediateIndex(key)
+                      }}
+                      onLoad={() => {
 
-            value={passengerNumber}
-            onChange={(e) => { setPassengerNumber(Number(e.target.value)); console.log(passengerNumber) }}
-            placeholder='Number of passengers' type="number" inputProps={{
-              startadornment: (
-                <InputAdornment position="start">
-                  <PersonIcon />
-                </InputAdornment>
-              ), inputMode: 'numeric', min: "0", pattern: '[0-9]*',
-            }} />
+                      }}
+                      onInputChange={(e, inputValue: string) => {
+                        if(!isIntermediatesPreFilled){
+                        setIntermediateIndex(key)
+                        handleChangeIntermediate(inputValue)}
+                      }}
+                      onClose={() => {
+                        let newOpenStates = intermediateCityCombos.map((e, index: number) => {
+                          return false
+                        })
+                        setintermediateOpenStates(newOpenStates)
+                        console.log("close", intermediateOpenStates)
+                      }}
+                      onChange={(event, selectedValue: City) => {
+                        setIntermediateIndex(key)
+                        handleSelectIntermediate(selectedValue)
 
-        </Box>
-      </Stack>
-      <Box>
-        <LoadingButton loading={buttonSubmitted}  onClick={submitForm} type='submit' sx={{ width: "100%", marginTop: "20px !important", letterSpacing: "2px", fontWeight: "700" }} variant="contained" endIcon={<SendIcon />} disabled={isFormInvalid}>
-          Calculte Distance
-        </LoadingButton>
-      </Box>
+                      }}
+                      clearIcon={<ClearIcon />}
+                      getOptionLabel={(option: City) => {
+                        if (intermediateValues[key].length > 0) {
+                          return option.Name
+                        } else {
+                          return `No cities found for "${intermediateValues[key]}"`
+                        }
+
+                      }}
+                      inputValue={intermediateValues[key]}
+                      value={selectedIntermediates[key]}
+                      options={IntermediateOptions[key]}
+                      forcePopupIcon={showintermediateCities[key]}
+                      loading={intermediateLoadings[key]}
+                      noOptionsText={intermediatePopperTexts[key]}
+                      renderOption={(props, option: any) => <li {...props}><LocationOnIcon /> {option.Name}</li>}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          required
+                          variant="filled"
+                          error={isIntermediateEmpty[key]}
+                          label="Intermediate City"
+                          autoComplete='off'
+                          value={selectedIntermediates[key]}
+                          InputProps={{
+                            ...params.InputProps,
+                            autoComplete: 'off',
+                            endAdornment: (
+                              <React.Fragment>
+                                {intermediateLoadings[key] ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </React.Fragment>
+                            ),
+                          }}
+                        />
+                      )}
+                    />
+                    {!isReadOnly && <Button variant="outlined" onClick={() => removeIntermediateCity(key)} endIcon={<WrongLocationIcon />}>
+                      Remove City
+                    </Button>}
+                  </Box>
+                )
+              })
+            }
+            {!isReadOnly &&<Box sx={{display:"flex"}}> <Button sx={{ marginBottom: "5px" }} variant="outlined" onClick={addIntermediateCity} endIcon={<AddLocationAltIcon />}>
+              Add Intermediate City
+            </Button>{isIntermediatesPreFilled && !isReadOnly && <Tooltip title="Edit"><Button ><EditIcon onClick={() => {
+                setIsIntermediatesPreFilled(false)
+              }} /></Button></Tooltip>}</Box>}
+            <Box sx={{ display: "flex" }}><Autocomplete
+              fullWidth
+              sx={{ width: { xs: "100%", sm: "200px" } }}
+              disabled={isReadOnly || isDestinationPreFilled}
+              onInputChange={(e, inputValue: string) => {
+                if (!isDestinationPreFilled) {
+
+                  setdestinationLoading(true)
+                  setdestinationValue(inputValue)
+                  setdestinationOpen(true)
+                }
+              }}
+              onClose={() => {
+                setdestinationOpen(false);
+              }}
+              onChange={(event, selectedValue: City) => {
+                setSelecteddestination(selectedValue)
+                console.log(selectedValue)
+              }}
+              clearIcon={<ClearIcon />}
+              getOptionLabel={(option: any) => {
+                if(destinationValue.length > 0) {
+                  return option.Name
+                } else {
+                  return `No cities found for "${destinationValue}"`
+                }
+              }}
+              options={destinationoptions}
+              forcePopupIcon={showdestinationCities}
+              loading={destinationLoading}
+              value={selecteddestination}
+              inputValue={destinationValue}
+              noOptionsText={destinationPopperText}
+
+              renderOption={(props, option: any) => <li {...props}><LocationOnIcon /> {option.Name}</li>}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  error={isDestinationEmpty}
+                  required
+                  autoComplete='off'
+                  variant="filled"
+                  label="City of Destination"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <React.Fragment>
+                        {destinationLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                        {params.InputProps.endAdornment}
+                      </React.Fragment>
+                    ),
+                  }}
+                />
+              )}
+            />{isDestinationPreFilled && !isReadOnly && <Tooltip title="Edit"><Button ><EditIcon onClick={() => {
+              setIsDestinationPreFilled(false)
+            }} /></Button></Tooltip>}</Box>
+
+          </Box>
+          <Box>
+            <Box sx={{display:"flex"}}>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <Stack spacing={3}>
+                <DesktopDatePicker
+                  minDate={new Date()}
+                  disablePast
+                  
+                  
+                  disabled={isReadOnly||isDatePrefilled}
+                  /* label="Date desktop" */
+                  inputFormat="DD/MM/YYYY"
+                  value={isReadOnly || isDatePrefilled ? dayjs(new Date(searchParams.getAll("date")[0])) : datevalue}
+                  onChange={handleDatePickerChange}
+                  renderInput={(params) => <TextField sx={{ width: { xs: "100%", sm: "200px" } }} required fullWidth {...params} />}
+                /></Stack></LocalizationProvider>{isDatePrefilled && !isReadOnly && <Tooltip title="Edit"><Button ><EditIcon onClick={() => {
+                  setIsDatePrefilled(false)
+                }} /></Button></Tooltip>}</Box>
+          </Box>
+          <Box>
+            {/* <PersonIcon /> */}
+           <Box sx={{display:"flex"}}><TextField
+              required
+              fullWidth
+              sx={{ width: { xs: "100%", sm: "200px" } }}
+              disabled={isReadOnly || isPassengerPrefilled}
+              value={isReadOnly || isPassengerPrefilled ? searchParams.getAll("passengers")[0] : passengerNumber}
+              onChange={(e) => { setPassengerNumber(Number(e.target.value)); console.log(passengerNumber) }}
+              placeholder='Number of passengers' type="number" inputProps={{
+                startadornment: (
+                  <InputAdornment position="start">
+                    <PersonIcon />
+                  </InputAdornment>
+                ), inputMode: 'numeric', min: "0", pattern: '[0-9]*',
+              }} />
+              {isPassengerPrefilled && !isReadOnly && <Tooltip title="Edit"><Button ><EditIcon onClick={() => {
+              setIsPassengerPrefilled(false)
+            }} /></Button></Tooltip>}</Box> 
+          </Box>
+        </Stack>
+        {!isReadOnly && <Box>
+          <LoadingButton loading={buttonSubmitted} onClick={submitForm} type='submit' sx={{ width: "100%", marginTop: "20px !important", letterSpacing: "2px", fontWeight: "700" }} variant="contained" endIcon={<SendIcon />} disabled={isFormInvalid}>
+            Calculte Distance
+          </LoadingButton>
+        </Box>}
 
 
 
-
-    </Paper>
+      </Paper>
+      <Snackbar open={isSnackbarOpen} autoHideDuration={3000} >
+        <Alert severity="error" sx={{ width: '100%' }}>
+          Please fill the requested input
+        </Alert>
+      </Snackbar></div>
   )
 }
 
