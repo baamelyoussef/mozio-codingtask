@@ -246,22 +246,22 @@ function SearchForm(props: any) {
       let newIntermediateLoadingsAfterSet = intermediateCityCombos.map((e, index: number) => {
         if (intermediateIndex == index) {
           return false
-        } else {
+        } else {    
           return false
         }
       })
       setintermediateLoadings(newIntermediateLoadingsAfterSet)
-      // let newintermediatePopperTexts: string[] = intermediateCityCombos.map((intermediatePopperText, index: number) => {
-      //   if (intermediateIndex == index) {
-      //     console.log(intermediateValues)
-      //       if (intermediateValues[index].toLowerCase() == "fail") { return (`Search failed`) }
-      //       else { return (`No cities found for "${intermediateValues[index]}"`) }
+      let newintermediatePopperTexts: string[] = intermediateCityCombos.map((intermediatePopperText, index: number) => {
+        if (intermediateIndex == index) {
+          console.log(intermediateValues)
+            if (intermediateValues[index].toLowerCase() == "fail") { return (`Search failed`) }
+            else { return (`No cities found for "${intermediateValues[index]}"`) }
           
-      //   } else {
-      //     return `Please enter a city name`
-      //   }
-      // })
-      // setintermediatePopperTexts(newintermediatePopperTexts)
+        } else {
+          return `Please enter a city name`
+        }
+      })
+      setintermediatePopperTexts(newintermediatePopperTexts)
     }, 2000);
 
 
@@ -400,7 +400,6 @@ function SearchForm(props: any) {
                 disabled={isReadOnly || isOriginPreFilled}
                 onInputChange={(e, inputValue: string) => {
                   if (!isOriginPreFilled) {
-
                     setOriginLoading(true)
                     setOriginValue(inputValue)
                     // setoriginOpen(true)
@@ -477,9 +476,10 @@ function SearchForm(props: any) {
                       onInputChange={(e, inputValue: string) => {
                         if(!isIntermediatesPreFilled){
                           setIsIntermediatesPreFilled(false)
-                        setintermediatePopperTexts([])
-                        setIntermediateIndex(key)
-                        handleChangeIntermediate(inputValue)}
+                          setintermediatePopperTexts([])
+                          setIntermediateIndex(key)
+                          handleChangeIntermediate(inputValue)
+                        }
                       }}
                       onClose={() => {
                         let newOpenStates = intermediateCityCombos.map((e, index: number) => {
