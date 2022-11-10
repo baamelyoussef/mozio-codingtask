@@ -33,7 +33,7 @@ color:white;
 function SearchForm(props: any) {
   const [buttonSubmitted, setButtonSubmitted] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isIntermediatesPreFilled, setIsIntermediatesPreFilled] = useState(false)
+  const [isIntermediatesPreFilled, setIsIntermediatesPreFilled] = useState(searchParams.getAll('intermediatecities').length > 0?true:false)
   const [isDatePrefilled, setIsDatePrefilled] = useState(false)
   const [isPassengerPrefilled, setIsPassengerPrefilled] = useState(false)
   const [isReadOnly, setIsReadOnly] = useState(props.readOnly)
@@ -46,7 +46,7 @@ function SearchForm(props: any) {
     [])
   const [datevalue, setDateValue] = useState(isReadOnly ? dayjs(new Date(searchParams.getAll("date")[0])) : dayjs(new Date()));
   const navigate = useNavigate();
-  const [passengerNumber, setPassengerNumber] = useState(0)
+  const [passengerNumber, setPassengerNumber] = useState(searchParams.getAll('passengers')[0]?searchParams.getAll('passengers')[0]:0)
   /*OriginStates */
   const [originValue, setOriginValue] = useState(
     // searchParams.get('origincity')?searchParams.getAll('origincity')[0]:
@@ -85,15 +85,7 @@ function SearchForm(props: any) {
   const [IntermediateOptions, setIntermediateOptions] = useState<Array<City[]>>([]);
   const [intermediateLoadings, setintermediateLoadings] = useState<Array<boolean>>([])
   useEffect(() => {
-    if (intermediateValues.length < 1) {
-      if (searchParams.getAll('intermediatecities').length < 1) {
-
-        let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
-          return ''
-        })
-        setintermediateValues(newIntermediateValues)
-      }
-    }
+    
     // console.log("test")
     if (searchParams.getAll('origincity').length > 0) {
       setIsOriginPreFilled(true)
@@ -108,7 +100,6 @@ function SearchForm(props: any) {
       // let selectedOriginParam: City = getCitiesByKeyword(searchParams.getAll('origincity')[0])[0]
       // setSelectedOrigin(selectedOriginParam)
     }
-
     if (searchParams.getAll('destinationcity').length > 0) {
       setIsDestinationPreFilled(true)
       setdestinationValue(searchParams.getAll('destinationcity')[0])
@@ -121,16 +112,20 @@ function SearchForm(props: any) {
     if (searchParams.getAll('date')[0]) {
       setIsDatePrefilled(true)
     }
-    // let selectedParamOptions:Array<City>= searchParams.getAll('intermediatecities').map((intermediateCity)=>{
-    //  return getCitiesByKeyword(intermediateCity)[0]
-    // })
-    // setSelectedIntermediates(selectedParamOptions)
-
-    const newInputVal = searchParams.get("origincity")
-    // setOriginInputValue(searchParams.get("origincity").toString())
-
-
   }, [])
+  useEffect(() => {
+    if (intermediateValues.length < 1) {
+      if (searchParams.getAll('intermediatecities').length < 1) {
+
+        let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
+          return ''
+        })
+        setintermediateValues(newIntermediateValues)
+      }
+      console.log(intermediateValues)
+    }
+  }, [intermediateCityCombos])
+  
   // console.log(selectedIntermediates)
   const isFormValid = () => {
     let areIntermediateValid: boolean = true
@@ -167,6 +162,16 @@ function SearchForm(props: any) {
       return false
     }
   }
+  useEffect(() => {
+    if(!isIntermediatesPreFilled &&searchParams.getAll('intermediatecities').length > 0){
+
+        let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
+          return''
+        })
+        setintermediateValues(newIntermediateValues)
+    }
+  }, [isIntermediatesPreFilled])
+  
   const submitForm = () => {
     if (isFormValid()) {
       setButtonSubmitted(true)
@@ -194,28 +199,7 @@ function SearchForm(props: any) {
       }, 3000);
     }
   }
-  useEffect(() => {
-    if (intermediateValues.length > 1) {
-
-      let newintermediatePopperTexts: string[] = intermediateCityCombos.map((intermediatePopperText, index: number) => {
-        if (intermediateIndex == index) {
-
-          if (intermediateValues[index].length > 0) {
-            if (intermediateValues[index].toLowerCase() == "fail") { return (`Search failed`) }
-            else { return (`No cities found for "${intermediateValues[index]}"`) }
-          }
-          else {
-            return (`Please enter a city name`)
-          }
-        } else {
-          return `Please enter a city name`
-        }
-      })
-      setintermediatePopperTexts(newintermediatePopperTexts)
-    }
-
-
-  }, [intermediateValues])
+  
 
 
   const handleChangeIntermediate = (inputV: string) => {
@@ -241,17 +225,16 @@ function SearchForm(props: any) {
       }
     })
     setintermediateOpenStates(newIntermediateOpenStates)
-    setTimeout(() => {
-      if (searchParams.getAll('intermediatecities').length < 1) {
-        let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
-          if (intermediateIndex == index) {
-            return inputV
-          } else {
-            return intermediateValues[index] ? intermediateValues[index] : ''
-          }
-        })
-        setintermediateValues(newIntermediateValues)
+    let newIntermediateValues: string[] = intermediateCityCombos.map((e, index: number) => {
+      if (intermediateIndex == index) {
+        return inputV
+      } else {
+        return intermediateValues[index] ? intermediateValues[index] : ''
       }
+    })
+    setintermediateValues(newIntermediateValues)
+    setTimeout(() => {
+      
       let newIntermediateOptions: Array<City[]> = intermediateCityCombos.map((IntermediateOption, index: number) => {
         if (index == intermediateIndex) {
           return getCitiesByKeyword(inputV)
@@ -268,6 +251,17 @@ function SearchForm(props: any) {
         }
       })
       setintermediateLoadings(newIntermediateLoadingsAfterSet)
+      // let newintermediatePopperTexts: string[] = intermediateCityCombos.map((intermediatePopperText, index: number) => {
+      //   if (intermediateIndex == index) {
+      //     console.log(intermediateValues)
+      //       if (intermediateValues[index].toLowerCase() == "fail") { return (`Search failed`) }
+      //       else { return (`No cities found for "${intermediateValues[index]}"`) }
+          
+      //   } else {
+      //     return `Please enter a city name`
+      //   }
+      // })
+      // setintermediatePopperTexts(newintermediatePopperTexts)
     }, 2000);
 
 
@@ -294,14 +288,12 @@ function SearchForm(props: any) {
 
   useEffect(() => {
     /*Form validation */
-    if (passengerNumber == 0) {
-      setIsFormInvalid(true)
-    } else {
+    if ( passengerNumber >0 && selectedOrigin&&selectedIntermediates&& selecteddestination ) {
       setIsFormInvalid(false)
+    } else {
+      setIsFormInvalid(true)
     }
-    // if (passengerNumber > 0 && datevalue) {
-    //   setIsFormInvalid(false)
-    // }
+    
   })
 
   useEffect(() => {
@@ -333,51 +325,7 @@ function SearchForm(props: any) {
     setIntermediateOptions(newIntermediateOptions)
   }, [intermediateCityCombos])
 
-  useEffect(() => {
-    // let newshowintermediateCities = showintermediateCities.map((showintermediateCity, index: number) => {
-    //   if (intermediateIndex == index) {
-    //     return true
-    //   } else {
-    //     return showintermediateCity
-    //   }
-    // })
-    // setShowintermediateCities(newshowintermediateCities)
-    // let newIntermediateOptions = IntermediateOptions.map((IntermediateOption, index: number) => {
-    //   if (intermediateIndex == index) {
-    //     return []
-    //   } else {
-    //     return IntermediateOption
-    //   }
-    // })
-
-    // setTimeout(() => {
-    //   let newIntermediateOptions = IntermediateOptions.map((IntermediateOption, index: number) => {
-    //     if (intermediateIndex == index) {
-    //       return getCitiesByKeyword(intermediateValues[intermediateIndex])
-    //     } else {
-    //       return IntermediateOption
-    //     }
-    //   })
-    //   setIntermediateOptions(newIntermediateOptions)
-    //   let newintermediateLoadingsReq = intermediateLoadings.map((intermediateLoading, index: number) => {
-    //     if (intermediateIndex == index) {
-    //       return false
-    //     } else {
-    //       return intermediateLoading
-    //     }
-    //   })
-    //   setintermediateLoadings(newintermediateLoadingsReq)
-    // }, 2000)
-    // let newshowintermediateCitiesCheck: boolean[] = showintermediateCities.map((showintermediateCity, index: number) => {
-    //   if (intermediateIndex == index) {
-    //     return IntermediateOptions[intermediateIndex].length < 1 && false
-    //   } else {
-    //     return showintermediateCity
-    //   }
-    // })
-    // setShowintermediateCities(newshowintermediateCitiesCheck)
-
-  }, [intermediateValues])
+  
   useEffect(() => {
     // let newIntermediateOptions: Array<City[]> = IntermediateOptions.map((IntermediateOption, index: number) => {
     //   if (intermediateIndex == index) {
@@ -455,7 +403,7 @@ function SearchForm(props: any) {
 
                     setOriginLoading(true)
                     setOriginValue(inputValue)
-                    setoriginOpen(true)
+                    // setoriginOpen(true)
                   }
                 }}
                 onClose={() => {
@@ -469,7 +417,7 @@ function SearchForm(props: any) {
                   if (originValue.length > 0) {
                     return option.Name
                   } else {
-                    return `No cities found for "${originValue}"`
+                    // return `No cities found for "${originValue}"`
                   }
                 }}
                 options={originoptions}
@@ -515,7 +463,6 @@ function SearchForm(props: any) {
                       fullWidth
                       disabled={isReadOnly||isIntermediatesPreFilled}
                       sx={{ width: { xs: "100%", sm: "200px" } }}
-                      autoComplete={isReadOnly}
                       onOpen={() => {
                         let newIntermediateOptions = intermediateCityCombos.map((IntermediateOption, index: number) => {
                           return []
@@ -529,6 +476,8 @@ function SearchForm(props: any) {
                       }}
                       onInputChange={(e, inputValue: string) => {
                         if(!isIntermediatesPreFilled){
+                          setIsIntermediatesPreFilled(false)
+                        setintermediatePopperTexts([])
                         setIntermediateIndex(key)
                         handleChangeIntermediate(inputValue)}
                       }}
@@ -537,7 +486,6 @@ function SearchForm(props: any) {
                           return false
                         })
                         setintermediateOpenStates(newOpenStates)
-                        console.log("close", intermediateOpenStates)
                       }}
                       onChange={(event, selectedValue: City) => {
                         setIntermediateIndex(key)
